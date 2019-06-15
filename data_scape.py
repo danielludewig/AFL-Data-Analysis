@@ -11,6 +11,7 @@ import pandas as pd
 from bs4 import BeautifulSoup as bs
 import re
 from urllib.request import urlopen
+from itertools import chain
 
 # Write function to scrape a single season of AFL data
 def getAFLResults(year):
@@ -68,15 +69,81 @@ def getAFLResults(year):
     
     totalDF.Date = pd.to_datetime(totalDF.Date)
     
+    # Lets look at the links to the game stats
+    atabs    = soup.find_all("a")
+    allLinks = [re.findall('href="(.*html)"', str(a)) for a in atabs] 
+    relLinks = [link for link in list(chain(*allLinks)) if "games" in link]
     
-    return totalDF.reset_index(drop = True), totalTable
+    # Loop through the links, and scrape the stats for each match 
+    allStats = pd.DataFrame()
+    
+    for link in relLinks:
+        
+        st = "https://afltables.com/afl"
+        
+        link = st + link.replace("..","")
+        
+        try:
+            html  = urlopen(link).read()
+            soup  = bs(html, "html.parser")
+            stats = pd.read_html(soup.prettify())
+            
+            fir = stats[0]
+            thi = stats[2]
+            fif = stats[4]
+            
+            rnd = [x for x in fir.loc[0,1].split(" ") if x != ""][1]
+    
+            team_one = thi.columns.levels[0][0].split(" ")[0]
+    
+            team_two = fif.columns.levels[0][0].split(" ")[0]
+            tcols = [thi.columns.levels[1][x] for x in thi.columns.labels[1]]
+            thi.columns = tcols
+    
+            coltokeep = [x for x in thi.columns if "Unnamed" not in x]
+    
+            teamOneStats = thi.loc[thi.loc[:,"#"] != "Rushed",coltokeep]
+            teamOneStats = teamOneStats.fillna(0)
+            teamOneStats["Team"] = team_one   
+                                       
+            fif.columns = tcols
+                                       
+            teamTwoStats = fif.loc[fif.loc[:,"#"] != "Rushed",coltokeep]
+            teamTwoStats = teamTwoStats.fillna(0)
+            teamTwoStats["Team"] = team_two 
+                      
+            comb = pd.concat([teamOneStats, teamTwoStats], 
+                     axis = 0, sort = True).reset_index(drop = True)
+    
+            comb["Round"] = rnd
+    
+            for col in comb.columns:
+                if col not in ("Team", "Player", "Round"):
+                    comb[col] = comb[col].astype(int)
+        
+            allStats = pd.concat([allStats, comb], sort = True)
+            
+        except:
+            print("Error with link: " + link)
+        
+        
+            
+    
+    
+    
+    return totalDF.reset_index(drop = True), totalTable, allStats
 
 
 
 ## Test case, as example
     
-# =============================================================================
-# year = 2018
-# test, testtable = getAFLResults(2018)
-# =============================================================================
+year = 2018
+test, testtable, teststats = getAFLResults(2018)
+
+
+
+
+
+
+
 
