@@ -6,7 +6,7 @@ Created on Fri Jun 14 21:46:38 2019
 @author: danielludewig
 """
 
-statsurl = "https://afltables.com/afl/stats/games/2018/031420180322.html"
+statsurl = "https://afltables.com/afl/stats/games/2018/122020180324.html"
 
 
 html  = urlopen(statsurl).read()
@@ -23,6 +23,7 @@ fifth = stats[4]
 sixth = stats[5]
 seven = stats[6]
 kates = stats[7]
+nines = stats[8]
 
 
 
@@ -56,7 +57,14 @@ for col in comb.columns:
         comb[col] = comb[col].astype(int)
 
 
-
+for df in stats:
+    if isinstance(df.columns, pd.core.indexes.multi.MultiIndex):
+        print(df.shape)
+        header =  df.columns.levels[0][df.columns.labels[0][0]]
+        if "Match" in header:
+            header = header.replace("Match", "---")
+            team = header.split("---")[0]
+            print(team)
 
 
 

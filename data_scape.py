@@ -87,58 +87,62 @@ def getAFLResults(year):
             html  = urlopen(link).read()
             soup  = bs(html, "html.parser")
             stats = pd.read_html(soup.prettify())
+
+        except:
+            print("Error with link: " + link)
             
-            fir = stats[0]
-            thi = stats[2]
-            fif = stats[4]
             
-            rnd = [x for x in fir.loc[0,1].split(" ") if x != ""][1]
-    
-            team_one = thi.columns.levels[0][0].split(" ")[0]
-    
-            team_two = fif.columns.levels[0][0].split(" ")[0]
-            tcols = [thi.columns.levels[1][x] for x in thi.columns.labels[1]]
-            thi.columns = tcols
-    
-            coltokeep = [x for x in thi.columns if "Unnamed" not in x]
-    
-            teamOneStats = thi.loc[thi.loc[:,"#"] != "Rushed",coltokeep]
-            teamOneStats = teamOneStats.fillna(0)
-            teamOneStats["Team"] = team_one   
-                                       
-            fif.columns = tcols
-                                       
-            teamTwoStats = fif.loc[fif.loc[:,"#"] != "Rushed",coltokeep]
-            teamTwoStats = teamTwoStats.fillna(0)
-            teamTwoStats["Team"] = team_two 
-                      
-            comb = pd.concat([teamOneStats, teamTwoStats], 
-                     axis = 0, sort = True).reset_index(drop = True)
-    
+        comb = pd.DataFrame()
+  
+          
+        for df in stats:
+                
+            if isinstance(df.columns, pd.core.index.Int64Index):
+                if "Round" in str(df.loc[0,1]):
+                    val = df.loc[0,1]
+                    rnd = [x for x in val.split(" ") if x!= ""][1]
+                
+            elif isinstance(df.columns, pd.core.indexes.multi.MultiIndex):
+                header =  df.columns.levels[0][df.columns.labels[0][0]]
+                if "Match" in header:
+                    header = header.replace("Match", "---")
+                    team = header.split("---")[0]
+                    
+                    lvls = df.columns.levels[1]
+                    labs = df.columns.labels[1]
+                    
+                    cols = [lvls[x] for x in labs]
+                    df.columns = cols
+                    
+                    colsKp = [x for x in df.columns if "Unname" not in x]
+                    
+                    output = df.loc[~df.loc[:,"#"].isin(["Rushed", "Totals"]),
+                                    colsKp]
+                    output = output.fillna(0)
+                    output["Team"] = team
+                    
+                    comb = pd.concat([comb, output], axis = 0, 
+                                     sort = True).reset_index(drop = True)
+
             comb["Round"] = rnd
     
             for col in comb.columns:
                 if col not in ("Team", "Player", "Round"):
                     comb[col] = comb[col].astype(int)
+    
         
             allStats = pd.concat([allStats, comb], sort = True)
             
-        except:
-            print("Error with link: " + link)
-        
-        
-            
-    
-    
-    
     return totalDF.reset_index(drop = True), totalTable, allStats
 
 
 
 ## Test case, as example
     
-year = 2018
-test, testtable, teststats = getAFLResults(2018)
+# =============================================================================
+# year = 2018
+# test, testtable, teststats = getAFLResults(2018)
+# =============================================================================
 
 
 
