@@ -12,9 +12,12 @@ from bs4 import BeautifulSoup as bs
 import re
 from urllib.request import urlopen
 from itertools import chain
+from datetime import datetime
 
 # Write function to scrape a single season of AFL data
 def getAFLResults(year):
+    # Get time function starts to run
+    startTime = datetime.now()
     # Create html string
     url = "https://afltables.com/afl/seas/" + str(year) + ".html"
     # Read html contents
@@ -74,14 +77,16 @@ def getAFLResults(year):
     allLinks = [re.findall('href="(.*html)"', str(a)) for a in atabs] 
     relLinks = [link for link in list(chain(*allLinks)) if "games" in link]
     
+    noOfLinks = len(relLinks)
+    
     # Loop through the links, and scrape the stats for each match 
     allStats = pd.DataFrame()
     
-    for link in relLinks:
+    for l_no, link in enumerate(relLinks):
         
-        st = "https://afltables.com/afl"
+        st = "https://www.afltables.com/afl"
         
-        link = st + link.replace("..","")
+        link = st + link.replace("..","").replace("\n", "")
         
         try:
             html  = urlopen(link).read()
@@ -90,8 +95,7 @@ def getAFLResults(year):
 
         except:
             print("Error with link: " + link)
-            
-            
+                      
         comb = pd.DataFrame()
   
           
@@ -125,14 +129,20 @@ def getAFLResults(year):
                                      sort = True).reset_index(drop = True)
 
             comb["Round"] = rnd
-    
-            for col in comb.columns:
-                if col not in ("Team", "Player", "Round"):
-                    comb[col] = comb[col].astype(int)
-    
-        
+            
             allStats = pd.concat([allStats, comb], sort = True)
             
+            if l_no+1 % 20 == 0:
+                print(str(l_no+1) + " links complete. " + 
+                      str(round((l_no+1)*100/noOfLinks, 1)) + "% Complete.")
+            
+        for col in allStats.columns:
+            if col not in ("Team", "Player", "Round"):
+                allStats[col] = allStats[col].astype(int)
+    
+    print("Data scrape complete. Script time:")
+    print(datetime.now() - startTime)
+        
     return totalDF.reset_index(drop = True), totalTable, allStats
 
 
