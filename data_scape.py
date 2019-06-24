@@ -4,6 +4,7 @@
 Created on Mon Jun 10 18:34:37 2019
 
 @author: danielludewig
+
 """
 
 # Import packaegs
@@ -34,14 +35,10 @@ def getAFLResults(year):
     totalTable = pd.DataFrame()
     # Loop through list of DFs, create row and add each row to cumlative DF
     ind = 0
+    rnd = 1
     for df in tables:
         ind += 1
-        if df.shape == (2,2):
-            try:
-                rnd = df.loc[0,0]
-            except:
-                rnd = "Error"
-        elif df.shape == (3,4):
+        if df.shape == (3,4):
             try:
                 dt = re.findall("... (.* PM) ", df.loc[0,3])[0]
             except:
@@ -67,7 +64,8 @@ def getAFLResults(year):
                              "Played", 
                              "Points", 
                              "Points_Percentage"]
-            table["Round"] = rnd
+            table["Round"] = "Round " + str(rnd)
+            rnd += 1
             totalTable = totalTable.append(table).reset_index(drop = True)
     
     totalDF.Date = pd.to_datetime(totalDF.Date)
